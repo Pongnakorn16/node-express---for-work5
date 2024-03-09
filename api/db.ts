@@ -82,26 +82,54 @@ router.get("/AddtoCreator:A_mid/:pid", (req, res)=>{
 
 router.get("/getStarsAndCreators/:movieName", (req, res) => {
     const movieName = req.params.movieName;
-    const likePattern = '%' + movieName + '%'; // เพิ่ม wildcard % ทั้งหมดด้านหน้าและด้านหลังของชื่อหนัง
+    const likePattern = '%' + movieName + '%';
 
-    const sqlStars = "SELECT * FROM Person4 INNER JOIN Stars4 ON Person4.pid = Stars4.pids INNER JOIN Movie4 ON Stars4.mids = Movie4.mid WHERE Movie4.name LIKE ?";
-    const sqlCreators = "SELECT midc,pidc,pid, p_name, age, detail, p_image FROM Person4 INNER JOIN Creators4 ON Person4.pid = Creators4.pidc INNER JOIN Movie4 ON Creators4.midc = Movie4.mid WHERE Movie4.name LIKE ?";
+    const sqlMovies = "SELECT mid, name, score, genre, poster, des FROM Movie4 WHERE name LIKE ?";
+    const sqlStars = "SELECT mid, pid,p_name,age,detail,p_image FROM Person4 INNER JOIN Stars4 ON Person4.pid = Stars4.pids INNER JOIN Movie4 ON Stars4.mids = Movie4.mid WHERE Movie4.name LIKE ? AND Movie4.mid = ?";
+    const sqlCreators = "SELECT mid, pid,p_name,age,detail,p_image FROM Person4 INNER JOIN Creators4 ON Person4.pid = Creators4.pidc INNER JOIN Movie4 ON Creators4.midc = Movie4.mid WHERE Movie4.name LIKE ? AND Movie4.mid = ?";
 
-    conn.query(sqlStars, [likePattern], (errStars, resultStars) => {
-        if (errStars) {
-            return res.status(400).json(errStars);
+    conn.query(sqlMovies, [likePattern], (errMovies, resultMovies) => {
+        if (errMovies) {
+            return res.status(400).json(errMovies);
         } else {
-            conn.query(sqlCreators, [likePattern], (errCreators, resultCreators) => {
-                if (errCreators) {
-                    return res.status(400).json(errCreators);
-                } else {
-                    const combinedResult = [...resultStars, ...resultCreators];
-                    res.json(combinedResult);
-                }
+            const movies = resultMovies;
+            const promises = movies.map((movie: any) => {
+                const movieId = movie.mid;
+                return new Promise((resolve, reject) => {
+                    conn.query(sqlStars, [likePattern, movieId], (errStars, resultStars) => {
+                        if (errStars) {
+                            reject(errStars);
+                        } else {
+                            conn.query(sqlCreators, [likePattern, movieId], (errCreators, resultCreators) => {
+                                if (errCreators) {
+                                    reject(errCreators);
+                                } else {
+                                    const combinedResult = {
+                                        movie: movie,
+                                        stars: resultStars,
+                                        creators: resultCreators
+                                    };
+                                    resolve(combinedResult);
+                                }
+                            });
+                        }
+                    });
+                });
             });
+
+            Promise.all(promises)
+                .then(results => {
+                    res.json(results);
+                })
+                .catch(error => {
+                    res.status(400).json(error);
+                });
         }
     });
 });
+
+
+
 
 
 
