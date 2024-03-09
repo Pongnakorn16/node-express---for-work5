@@ -39,4 +39,28 @@ export interface UpdateScore {
     R_score_win : number;
     R_score_lose : number;
  }
+ export interface Movie {
+    name : string;
+    score : number;
+    genre : string;
+    poster : string;
+    des : string;
+ }
+
+ export interface Person {
+    name : string;
+    age : number;
+    detail : string;
+    p_image : string;
+ }
+
+ export interface toStars{
+    mids : number;
+    pids : number;
+ }
+
+ export interface toCreators{
+    midc : number;
+    pidc : number;
+ }
 
